@@ -1,0 +1,26 @@
+{
+  "name": "bing-create",
+  "version": "0.0.1",
+  "description": "Generate images using Bing Image Creator",
+  "type": "module",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "bun test",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check ."
+  },
+  "keywords": ["bing", "image", "generator", "ai", "dalle"],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/bun": "^1.3.3"
+  }
+}
