@@ -17,6 +17,7 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "a11y": "on",
       "complexity": {
         "recommended": true,
         "useLiteralKeys": "off"
@@ -25,8 +26,7 @@
         "recommended": true
       },
       "performance": {
-        "recommended": true,
-        "useTopLevelRegex": "off"
+        "recommended": true
       },
       "security": {
         "recommended": true
@@ -35,10 +35,7 @@
         "recommended": true,
         "useNamingConvention": "off"
       },
-      "suspicious": {
-        "recommended": true,
-        "noExplicitAny": "off"
-      }
+      "suspicious": "on"
     }
   },
   "javascript": {
