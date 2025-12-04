@@ -33,7 +33,7 @@ for (const image of images) {
 Bing Image Creator requires the `_U` cookie from an authenticated Microsoft
 account. Sign in at
 [bing.com/images/create](https://www.bing.com/images/create), open DevTools
-(F12), navigate to Application → Cookies → `https://www.bing.com`, and copy the
+(F12), navigate to Application ⇢ Cookies ⇢ `https://www.bing.com`, and copy the
 `_U` cookie value.
 
 The cookie typically lasts several days. Authentication errors indicate
