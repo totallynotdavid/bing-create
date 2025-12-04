@@ -19,8 +19,12 @@ describe.skipIf(!shouldRun)("integration", () => {
   test(
     "createImages returns valid image URLs",
     async () => {
+      if (!cookie) {
+        throw new Error("BING_AUTH_COOKIE is not set");
+      }
+
       const results = await createImages("a small blue square", {
-        cookie: cookie!,
+        cookie: cookie,
         model: Model.DALLE3,
         pollIntervalMs: 2_000,
       });
