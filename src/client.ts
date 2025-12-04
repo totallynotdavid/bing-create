@@ -3,10 +3,10 @@ import type {
   ImageResult,
   ModelConfig,
   AspectRatioType,
-} from "./types";
-import { Model, AspectRatio, MODEL_CONFIGS } from "./types";
-import { extractRequestId, extractImageUrls } from "./parse";
-import { generateFilename } from "./filename";
+} from "./types.ts";
+import { Model, AspectRatio, MODEL_CONFIGS } from "./types.ts";
+import { extractRequestId, extractImageUrls } from "./parse.ts";
+import { generateFilename } from "./filename.ts";
 
 const DEFAULT_GENERATION_TIMEOUT_MS = 300_000;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
