@@ -1,8 +1,3 @@
-const BLOCKED_IMAGES = [
-  "https://r.bing.com/rp/in-2zU3AJUdkgFe7ZKv19yPBHVs.png",
-  "https://r.bing.com/rp/TX9QuO3WzcCJz1uaaSwQAz39Kb0.jpg",
-];
-
 export function extractRequestId(redirectUrl: string): string {
   const match = redirectUrl.match(/[?&]id=([^&]+)/);
   if (!match?.[1]) {
@@ -23,14 +18,6 @@ export function extractImageUrls(html: string): string[] {
     .filter(isValidImageUrl);
 
   const uniqueUrls = [...new Set(urls)];
-
-  for (const url of uniqueUrls) {
-    if (BLOCKED_IMAGES.includes(url)) {
-      throw new Error(
-        "Prompt blocked by Bing content policy. Try a different prompt.",
-      );
-    }
-  }
 
   if (uniqueUrls.length === 0) {
     throw new Error("No images found in response");
