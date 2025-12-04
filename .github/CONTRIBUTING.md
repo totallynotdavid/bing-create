@@ -1,68 +1,64 @@
-# How to contribute
+# Contributing
 
-You can install the tools via [mise](https://mise.jdx.dev/getting-started.html).
-All tools are configured in [mise.toml](../mise.toml). You just need to then do:
+## Setup
+
+Install tools via [mise](https://mise.jdx.dev/getting-started.html). All tools
+are configured in `mise.toml`:
 
 ```bash
 mise install
 bun install
 ```
 
-Available commands:
+Run tests and checks:
 
 ```bash
-bun run test       # Run tests (bun test runner)
-bun run check      # Format + lint (Biome)
+bun run test       # bun test runner
+bun run check      # format + lint with Biome
 ```
 
 ## Architecture
 
+The codebase is organized into:
+
 ```
 src/
-├── index.ts      # Public exports only
-├── client.ts     # Main API: createImages() with polling logic
-├── types.ts      # Model/AspectRatio enums, Options/ImageResult interfaces
+├── index.ts      # public exports
+├── client.ts     # createImages() with polling logic
+├── types.ts      # model/aspect ratio enums, interfaces
 ├── parse.ts      # HTML/URL parsing, content policy detection
-└── filename.ts   # Prompt-to-slug filename generation
+└── filename.ts   # prompt-to-slug filename generation
 ```
 
-The data flow:
+The data flow follows this sequence:
 
 ```
-createImages() ⇢ initiateGeneration() (POST) ⇢ pollForResults() (GET loop)
-             ⇢ extractImageUrls() ⇢ return ImageResult[]
+createImages()
+  ⇢ initiateGeneration() (POST to create)
+  ⇢ pollForResults() (GET loop until ready)
+  ⇢ extractImageUrls() (parse HTML response)
+  ⇢ return ImageResult[]
 ```
 
-```mermaid
-flowchart LR
-    A[createImages()] --> B[initiateGeneration()<br/>(POST)]
-    B --> C[pollForResults()<br/>(GET loop)]
-    C --> D[extractImageUrls()]
-    D --> E[return ImageResult[]]
-```
+## Code style
 
-## Code conventions
+Use Biome for formatting and linting, not ESLint or Prettier. The configuration
+enforces double quotes, two-space indent, and 80 character line width. Import
+statements must include `.ts` extensions.
 
-- Biome for formatting (not ESLint/Prettier)
-- Double quotes, 2-space indent, 80 char line width
-- `.ts` extensions in imports
-- Use `as const` objects for enums (see `Model` and `AspectRatio` in types.ts)
-- No classes—use plain functions and interfaces
-- Throw descriptive `Error` messages with context
+Prefer `as const` objects for enums instead of TypeScript enums. See `Model` and
+`AspectRatio` in `types.ts` for examples. Avoid classes in favor of plain
+functions and interfaces. Throw descriptive error messages with enough context
+for debugging.
 
----
+## API documentation
 
-# Documentation for Bing Image Creator's internal HTTP API
+All requests require the `_U` cookie from an authenticated Bing session:
+`Cookie: _U=<cookie>`
 
-This is unofficial and may change without notice.
+### Models and parameters
 
-All requests require the `_U` cookie from an authenticated Bing session.
-
-```
-Cookie: _U=<cookie>
-```
-
-Available models:
+Available models and their API parameters:
 
 | Model       | `mdl` | Output   | Aspect ratios |
 | ----------- | ----- | -------- | ------------- |
@@ -72,44 +68,29 @@ Available models:
 
 The `ar` parameter controls aspect ratio. Values differ by model:
 
-<details>
-<summary>DALL-E 3 (mdl=0)</summary>
+**DALL-E 3** (`mdl=0`):
 
-| `ar` | Ratio           | Dimensions |
-| ---- | --------------- | ---------- |
-| `1`  | 1:1 (square)    | 1024×1024  |
-| `2`  | 7:4 (landscape) | 1792×1024  |
-| `3`  | 4:7 (portrait)  | 1024×1792  |
+- `ar=1`: 1:1 square (1024x1024)
+- `ar=2`: 7:4 landscape (1792x1024)
+- `ar=3`: 4:7 portrait (1024x1792)
 
-</details>
+**GPT-4o** (`mdl=1`):
 
-<details>
-<summary>GPT-4o (mdl=1)</summary>
+- `ar=1`: 1:1 square (1024x1024)
+- `ar=2`: 3:2 landscape (1536x1024)
+- `ar=3`: 2:3 portrait (1024x1536)
 
-| `ar` | Ratio           | Dimensions |
-| ---- | --------------- | ---------- |
-| `1`  | 1:1 (square)    | 1024×1024  |
-| `2`  | 3:2 (landscape) | 1536×1024  |
-| `3`  | 2:3 (portrait)  | 1024×1536  |
+**MAI-Image-1** (`mdl=4`):
 
-</details>
+- `ar=1`: 1:1 square (1024x1024)
+- `ar=2`: 3:2 landscape (1248x832)
+- `ar=3`: 2:3 portrait (832x1248)
 
-<details>
-<summary>MAI-Image-1 (mdl=4)</summary>
+### Generation flow
 
-| `ar` | Ratio           | Dimensions |
-| ---- | --------------- | ---------- |
-| `1`  | 1:1 (square)    | 1024×1024  |
-| `2`  | 3:2 (landscape) | 1248×832   |
-| `3`  | 2:3 (portrait)  | 832×1248   |
+**Step 1**: Initiate generation
 
-</details>
-
-## Endpoints
-
-### 1. Initiate generation
-
-**Request:**
+Send a POST request to start the generation process:
 
 ```http
 POST /images/create?q={prompt}&rt=4&mdl={model}&ar={aspect}&FORM=GENCRE HTTP/1.1
@@ -117,31 +98,32 @@ Host: www.bing.com
 Cookie: _U={cookie}
 ```
 
-| Parameter | Required | Description                                   |
-| --------- | -------- | --------------------------------------------- |
-| `q`       | Yes      | URL-encoded prompt                            |
-| `rt`      | Yes      | Request type. Use `4`                         |
-| `mdl`     | No       | Model ID (`0`, `1`, or `4`). Default: `0`     |
-| `ar`      | No       | Aspect ratio (`1`, `2`, or `3`). Default: `1` |
-| `FORM`    | No       | Form identifier. Use `GENCRE`                 |
+Parameters:
 
-**Response:**
+- `q`: URL-encoded prompt (required)
+- `rt`: Request type, always use `4` (required)
+- `mdl`: Model ID: `0` (DALL-E 3), `1` (GPT-4o), or `4` (MAI-Image-1). Default:
+  `0`
+- `ar`: Aspect ratio: `1` (square), `2` (landscape), or `3` (portrait). Default:
+  `1`
+- `FORM`: Form identifier, use `GENCRE`
+
+The response is a 302 redirect with the request ID in the location header:
 
 ```http
 HTTP/1.1 302 Found
 Location: /images/create?q={prompt}&rt=4&mdl=0&ar=1&FORM=GENCRE&id={request_id}
 ```
 
-Extract `id` from the redirect URL. Format: `1-{uuid}` (e.g.,
-`1-6930d798aebe4d2a9d54027da1fdb513`)
+Extract the `id` parameter from the redirect URL. Format is `1-{uuid}`, like
+`1-6930d798aebe4d2a9d54027da1fdb513`.
 
-**Errors:**
+If there's no redirect (200 status with HTML), the prompt was blocked by content
+policy or the cookie is invalid.
 
-- No redirect ⇢ Authentication failed or invalid cookie
+**Step 2**: Poll for results
 
-### 2. Poll for results
-
-**Request:**
+Poll the results endpoint until generation completes:
 
 ```http
 GET /images/create/async/results/{request_id}?q={prompt}&mdl={model}&ar={aspect} HTTP/1.1
@@ -149,25 +131,16 @@ Host: www.bing.com
 Cookie: _U={cookie}
 ```
 
-| Parameter    | Required | Description               |
-| ------------ | -------- | ------------------------- |
-| `request_id` | Yes      | ID from initiation step   |
-| `q`          | Yes      | Same prompt (URL-encoded) |
-| `mdl`        | No       | Same model ID             |
-| `ar`         | No       | Same aspect ratio         |
+Response meanings:
 
-**Response:**
+- 200 with empty body: Still generating, poll again
+- 200 with HTML body: Generation complete, parse image URLs
+- 200 with JSON containing `errorMessage`: Generation failed
 
-| Status | Body                     | Meaning                      |
-| ------ | ------------------------ | ---------------------------- |
-| 200    | Empty                    | Still generating, poll again |
-| 200    | HTML                     | Generation complete          |
-| 200    | JSON with `errorMessage` | Error occurred               |
+Poll every 1-2 seconds. Typical wait time is 5-70 seconds depending on model and
+server load.
 
-**Polling interval:** 1-2 seconds  
-**Typical wait:** 5-20 seconds (varies by model and load)
-
-## Parsing results
+### Parsing results
 
 The HTML response contains image URLs in `src` attributes:
 
@@ -175,65 +148,33 @@ The HTML response contains image URLs in `src` attributes:
 <img src="/th/id/OIG1.abc123?w=540&h=540&c=6&pid=ImgGn" />
 ```
 
-### URL formats
-
-**Relative (GPT-4o, MAI):**
+URLs come in two formats. GPT-4o and MAI-Image-1 return relative paths:
 
 ```
 /th/id/OIG3.abc123?w=540&h=540&pid=ImgGn
 ```
 
-**Absolute (DALL-E 3):**
+DALL-E 3 returns absolute CDN URLs:
 
 ```
 https://tse1.mm.bing.net/th/id/OIG1.abc123?pid=ImgGn
 ```
 
-### URL normalization
+The library normalizes all URLs to a consistent format. Convert relative URLs to
+absolute by prefixing with `https://www.bing.com`. Convert CDN URLs
+(tse1.mm.bing.net, etc.) to www.bing.com. Use the `?pid=ImgGn` parameter for
+full resolution images.
 
-The library normalizes all URLs to a consistent format:
+Image ID prefixes indicate the model: `OIG1` for DALL-E 3, `OIG2` for
+MAI-Image-1, `OIG3` and `OIG4` for GPT-4o.
 
-1. Convert relative URLs to absolute:
+### Error handling
 
-   ```
-   /th/id/OIG1.abc ⇢ https://www.bing.com/th/id/OIG1.abc
-   ```
+Content policy blocks happen at initiation. Instead of a 302 redirect, the POST
+returns 200 with the Bing Image Creator homepage HTML. This means no request ID
+and no ability to poll. The prompt must be modified.
 
-2. Convert CDN URLs to www:
-
-   ```
-   https://tse1.mm.bing.net/th/id/... ⇢ https://www.bing.com/th/id/...
-   ```
-
-3. For full resolution, use `?pid=ImgGn`:
-   ```
-   https://www.bing.com/th/id/OIG1.abc123?pid=ImgGn
-   ```
-
-### Image ID prefixes
-
-| Prefix | Model              |
-| ------ | ------------------ |
-| `OIG1` | DALL-E 3           |
-| `OIG2` | MAI-Image-1        |
-| `OIG3` | GPT-4o             |
-| `OIG4` | GPT-4o (alternate) |
-
-## Error handling
-
-### Content policy block
-
-Bing blocks prompts that violate content policy at the **initiation stage**.
-Instead of returning a 302 redirect, the POST request returns a 200 status with
-an HTML page (the Bing Image Creator homepage). This means:
-
-- No redirect URL ⇢ No request ID ⇢ Cannot poll for results
-- The `initiateGeneration()` function throws: "No redirect received from Bing"
-
-Blocked prompts include explicit content, violence, hate speech, and other
-policy violations. There is no way to bypass this—the prompt must be modified.
-
-### JSON error response
+JSON error responses during polling contain an `errorMessage` field:
 
 ```json
 {
@@ -241,42 +182,40 @@ policy violations. There is no way to bypass this—the prompt must be modified.
 }
 ```
 
-### Common issues
+If polling returns empty responses indefinitely, generation failed silently. The
+library handles this with the generation timeout.
 
-| Symptom                        | Cause                                                       |
-| ------------------------------ | ----------------------------------------------------------- |
-| No redirect on POST (200 HTML) | Prompt blocked by content policy, or invalid/expired cookie |
-| Empty response indefinitely    | Generation failed silently                                  |
-
-## Complete flow example
+### Complete example
 
 ```
 1. POST /images/create?q=a+cat&rt=4&mdl=0&ar=1&FORM=GENCRE
    ⇢ 302 Redirect with id=1-abc123
 
 2. GET /images/create/async/results/1-abc123?q=a+cat&mdl=0&ar=1
-   ⇢ 200 (empty body, still processing)
+   ⇢ 200 (empty, still processing)
 
 3. GET /images/create/async/results/1-abc123?q=a+cat&mdl=0&ar=1
-   ⇢ 200 (empty body, still processing)
+   ⇢ 200 (empty, still processing)
 
 4. GET /images/create/async/results/1-abc123?q=a+cat&mdl=0&ar=1
-   ⇢ 200 HTML with 4 image URLs
+   ⇢ 200 (HTML with 4 image URLs)
 ```
 
-## Notes
+### Notes
 
-- Image URLs expire after some time (hours/days)
-- The `rt=4` parameter appears required for all models
-- Generation time: DALL-E 3 ≈ 5-15s, GPT-4o/MAI ≈ 20-70s
+Image URLs expire after several hours or days. The `rt=4` parameter appears
+required for all models. Generation times vary: DALL-E 3 takes 5-15 seconds,
+GPT-4o and MAI-Image-1 take 20-70 seconds.
 
 ## Adding new models
 
-When Bing adds new models:
+When Bing adds new models, update the library in three places:
 
-1. Update `Model` const in `types.ts`
-2. Add entry to `MODEL_CONFIGS` with:
-   - `mdl` value (the API parameter)
-   - `expectedImages` count
-   - `aspectRatios` mapping
-3. Test with both single and multiple image outputs
+1. Add the model to the `Model` const in `types.ts`
+2. Add an entry to `MODEL_CONFIGS` with the `mdl` value, `expectedImages` count,
+   and `aspectRatios` mapping
+3. Test with both single and multiple image outputs to verify the expected count
+
+The aspect ratio mapping should follow the pattern established by existing
+models, using integers 1, 2, and 3 for square, landscape, and portrait
+respectively.
