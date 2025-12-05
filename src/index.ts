@@ -1,3 +1,7 @@
 export { createImages } from "./client.ts";
-export { Model, AspectRatio } from "./types.ts";
-export type { Options, ImageResult } from "./types.ts";
+export type {
+  CreateImagesOptions,
+  ImageResult,
+  Model,
+  AspectRatio,
+} from "./types.ts";
