@@ -1,14 +1,14 @@
 import { describe, test, expect } from "bun:test";
 import { createImages } from "../src/client.ts";
 
-const cookie = process.env["BING_AUTH_COOKIE"];
+const cookie = process.env["BING_COOKIE"];
 const shouldRun = !!cookie;
 
 describe.skipIf(!shouldRun)("integration: real API calls", () => {
   test(
     "generates images and returns valid URLs",
     async () => {
-      if (!cookie) throw new Error("BING_AUTH_COOKIE not set");
+      if (!cookie) throw new Error("BING_COOKIE not set");
 
       const results = await createImages("a small blue square", {
         cookie,
@@ -35,7 +35,7 @@ describe.skipIf(!shouldRun)("integration: real API calls", () => {
   test(
     "handles different aspect ratios",
     async () => {
-      if (!cookie) throw new Error("BING_AUTH_COOKIE not set");
+      if (!cookie) throw new Error("BING_COOKIE not set");
 
       const results = await createImages("red circle", {
         cookie,
