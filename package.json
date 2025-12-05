@@ -9,7 +9,7 @@
     "image-generation",
     "chatgpt"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "David Duran <dadch1404@gmail.com>",
   "repository": {
     "type": "git",
