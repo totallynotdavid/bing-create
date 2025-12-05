@@ -3,46 +3,41 @@
 [![NPM Version](https://img.shields.io/npm/v/bing-create?logo=npm&logoColor=212121&label=version&labelColor=ffc44e&color=212121)](https://www.npmjs.com/package/bing-create)
 [![codecov](https://codecov.io/gh/totallynotdavid/bing-create/graph/badge.svg?token=8OBBAZG8MN)](https://codecov.io/gh/totallynotdavid/bing-create)
 
-Generate images via Bing Image Creator's internal API. Supports DALL-E 3,
-GPT-4o, and MAI-Image-1.
+Generate images using Bing Image Creator's internal API. Supports DALL-E 3,
+GPT-4o, and MAI-Image-1 models.
 
 ```bash
 npm install bing-create
 ```
 
-## Quick start
+## Basic usage
 
-The `createImages` function generates images from text prompts and returns an
-array of results with URLs and suggested filenames:
+The package exports a single function that generates images from text prompts.
+You need the `_U` cookie from an authenticated Microsoft account to use the API.
+Sign in at [bing.com/images/create](https://www.bing.com/images/create), open
+DevTools (F12), go to Application ⇢ Cookies ⇢ `https://www.bing.com`, and copy
+the `_U` cookie value.
 
 ```ts
 import { createImages } from "bing-create";
 
 const images = await createImages("a cat wearing a space helmet", {
-  cookie: process.env.BING_COOKIE,
+  cookie: process.env.BING_COOKIE ?? "",
 });
 
-for (const image of images) {
-  console.log(image.url); // https://www.bing.com/th/id/OIG1...
-  console.log(image.filename); // a-cat-wearing-a-space-helmet-1.jpg
+for (const { url, suggestedFilename } of images) {
+  console.log(url);
+  console.log(suggestedFilename);
 }
 ```
 
-## Authentication
+The function returns an array of results with URLs and suggested filenames.
+Authentication errors indicate the cookie expired. Cookies typically last
+several days.
 
-Bing Image Creator requires the `_U` cookie from an authenticated Microsoft
-account. Sign in at
-[bing.com/images/create](https://www.bing.com/images/create), open DevTools
-(F12), navigate to Application ⇢ Cookies ⇢ `https://www.bing.com`, and copy the
-`_U` cookie value.
+## Models and aspect ratios
 
-The cookie typically lasts several days. Authentication errors indicate
-expiration.
-
-## Models
-
-The library supports three models with different characteristics. DALL-E 3 is
-the default:
+Three models are available with different performance characteristics:
 
 | Model       | Images | Speed   | Aspect ratios    |
 | ----------- | ------ | ------- | ---------------- |
@@ -50,60 +45,40 @@ the default:
 | MAI-Image-1 | 1      | ~20-30s | square, 3:2, 2:3 |
 | GPT-4o      | 1      | ~30-70s | square, 3:2, 2:3 |
 
-Use the `Model` enum to specify which model to use:
+DALL-E 3 is the default model. All models support their listed aspect ratios.
+Actual pixel dimensions vary by model and are documented in
+[CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ```ts
-import { createImages, Model, AspectRatio } from "bing-create";
-
-const images = await createImages("mountain sunset", {
-  cookie: process.env.BING_COOKIE,
-  model: Model.GPT4O,
-  aspectRatio: AspectRatio.LANDSCAPE,
+await createImages("mountain sunset", {
+  cookie: process.env.BING_COOKIE ?? "",
+  model: "gpt4o",
+  aspectRatio: "landscape",
 });
 ```
 
-All models support square, landscape, and portrait orientations via
-`AspectRatio.SQUARE`, `AspectRatio.LANDSCAPE`, and `AspectRatio.PORTRAIT`.
-Actual dimensions vary by model.
-
 ## Configuration
 
-The `createImages` function accepts an options object with the following
-properties:
+The `createImages` function accepts a prompt string and an options object. The
+cookie field is required. All other fields are optional:
 
-Required:
+<!-- prettier-ignore -->
+```ts
+await createImages(prompt, {
+  cookie: string,           // required: _U cookie value
+  model: "dalle3",          // optional: dalle3 | gpt4o | mai
+  aspectRatio: "square",    // optional: square | landscape | portrait
+  timeouts: {
+    generationMs: 300_000,   // optional: total generation timeout
+    pollingMs: 1_000,        // optional: poll interval
+    requestMs: 30_000,       // optional: per-request timeout
+  },
+});
+```
 
-- `cookie`: The `_U` cookie value from an authenticated Bing session
+Timeouts control generation behavior. The generation timeout sets the maximum
+wait time for image creation. Polling interval determines how often to check for
+completion. Request timeout applies to individual HTTP requests.
 
-Optional:
-
-- `model`: Model to use (default: `Model.DALLE3`)
-- `aspectRatio`: Output aspect ratio (default: `AspectRatio.SQUARE`)
-- `generationTimeoutMs`: Maximum wait time for generation in milliseconds
-  (default: `300000` / 5 minutes)
-- `pollIntervalMs`: Interval between polling requests (default: `1000`)
-- `requestTimeoutMs`: Timeout for individual HTTP requests (default: `30000`)
-
-The function handles the full generation flow including initiation, polling, and
-URL extraction. It returns a promise that resolves to an array of `ImageResult`
-objects, each containing a `url` (direct link to the generated image) and a
-`filename` (slugified prompt with index).
-
-## Error handling
-
-Common errors and their causes:
-
-- `"Prompt must be a non-empty string"`: The prompt parameter is empty or not a
-  string.
-- `"options.cookie is required..."`: The cookie option is missing or empty.
-- `"No redirect received from Bing"`: The prompt was blocked by content policy,
-  or the cookie is invalid or expired. Blocked prompts include explicit content,
-  violence, and hate speech. Modify the prompt or refresh your cookie.
-- `"Generation timed out..."`: Polling exceeded the `generationTimeoutMs` limit.
-  The default is five minutes. Increase the timeout or try again with a simpler
-  prompt.
-
----
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for architecture details and API
-documentation. Apache-2.0 License.
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for error scenarios and
+implementation details.
