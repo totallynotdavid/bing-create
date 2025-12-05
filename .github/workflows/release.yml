@@ -1,0 +1,31 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'totallynotdavid' }}
+
+    environment:
+      name: publishing
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@635640504f6d7197d3bb29876a652f671028dc97 # v2.0.2
+        with:
+          bun-version: "1.3.3"
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run build
+
+      - run: npm publish
