@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { normalizeUrls } from "../src/url.ts";
+import { normalizeUrls } from "../src/image/url.ts";
 
 describe("normalizeUrls", () => {
   test("converts CDN URLs to www.bing.com", () => {

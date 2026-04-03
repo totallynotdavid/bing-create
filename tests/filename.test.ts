@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { generateFilename } from "../src/filename.ts";
+import { generateFilename } from "../src/image/filename.ts";
 
 describe("generateFilename", () => {
   test("converts prompt to lowercase slug", () => {

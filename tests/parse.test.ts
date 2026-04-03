@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { extractRequestId, extractImageUrls } from "../src/parse.ts";
+import { extractRequestId, extractImageUrls } from "../src/image/parse.ts";
 
 describe("extractRequestId", () => {
   test("extracts ID from redirect URL", () => {

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createImages } from "../src/client.ts";
+import { createImages, createVideo } from "../src/client.ts";
 
 const cookie = process.env["BING_COOKIE"];
 const shouldRun = !!cookie;
@@ -50,5 +50,42 @@ describe.skipIf(!shouldRun)("integration: real API calls", () => {
       expect(results[0].url).toStartWith("https://www.bing.com/th/id/");
     },
     { timeout: 120_000 },
+  );
+
+});
+
+describe.skipIf(!shouldRun)("integration: video API", () => {
+  test(
+    "generates video with portrait aspect ratio",
+    async () => {
+      if (!cookie) throw new Error("BING_COOKIE not set");
+
+      const videoUrl = await createVideo("a small blue square", {
+        cookie,
+        aspectRatio: "portrait",
+        timeouts: { pollingMs: 2_000 },
+      });
+
+      expect(videoUrl).toStartWith("https://th.bing.com/th/id/");
+      expect(videoUrl).toContain("?pid=videocreator");
+    },
+    { timeout: 360_000 },
+  );
+
+  test(
+    "generates video with landscape aspect ratio",
+    async () => {
+      if (!cookie) throw new Error("BING_COOKIE not set");
+
+      const videoUrl = await createVideo("a red circle", {
+        cookie,
+        aspectRatio: "landscape",
+        timeouts: { pollingMs: 2_000 },
+      });
+
+      expect(videoUrl).toStartWith("https://th.bing.com/th/id/");
+      expect(videoUrl).toContain("?pid=videocreator");
+    },
+    { timeout: 360_000 },
   );
 });
