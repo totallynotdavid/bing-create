@@ -44,7 +44,7 @@ export async function pollForVideoUrl(
   while (true) {
     const elapsed = Date.now() - startTime;
     if (elapsed >= generationTimeoutMs) {
-      throw new Error(`Image generation timed out after ${generationTimeoutMs / 1000}s`);
+      throw new Error(`Video generation timed out after ${generationTimeoutMs / 1000}s`);
     }
 
     const remainingTime = generationTimeoutMs - elapsed;
