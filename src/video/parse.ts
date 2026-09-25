@@ -7,12 +7,12 @@ export function extractVideoUrl(text: string): string | null {
 
   const decoded = text
     .replace(/\\\//g, "/")
-    .replace(/\\u0026/gi, "&")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">")
+    .replace(/\\u0026/gi, "&");
 
   for (const match of decoded.matchAll(/\bourl="([^"]+)"/gi)) {
     const rawUrl = match[1]?.trim();
