@@ -23,6 +23,7 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "docs",
     "readme.md",
     "LICENSE"
   ],
