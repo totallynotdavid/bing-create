@@ -14,8 +14,11 @@ Run tests and checks:
 
 ```bash
 bun run test       # bun test runner
-bun run check      # format + lint with Biome
+bun run check      # read-only: Biome lint and format, Prettier for md/yml
+bun run format     # rewrite files to pass check
 ```
+
+`check` and `bun test` also run on every pull request and push to `master`.
 
 ## Architecture
 
@@ -24,29 +27,34 @@ The codebase is organized into:
 ```
 src/
 ├── index.ts      # public exports
-├── client.ts     # createImages() with polling logic
-├── types.ts      # model/aspect ratio enums, interfaces
-├── parse.ts      # HTML/URL parsing, content policy detection
-└── filename.ts   # prompt-to-slug filename generation
+├── client.ts     # createImages() and createVideo()
+├── types.ts      # Model, AspectRatio, Timeouts, option and result types
+├── constants.ts  # MODEL_CONFIGS (mdl and aspect ratio codes), USER_AGENT
+├── image/        # generate.ts, parse.ts, url.ts, filename.ts
+├── video/        # generate.ts, parse.ts, url.ts
+└── shared/       # http.ts, options.ts, request.ts, url.ts
 ```
 
-The data flow follows this sequence:
+The data flow of `createImages()` follows this sequence; `createVideo()` has the
+same shape with the functions in `video/`:
 
 ```
 createImages()
+  ⇢ validate() and resolveTimeouts() (shared/options.ts)
   ⇢ initiateGeneration() (POST to create)
-  ⇢ pollForResults() (GET loop until ready)
-  ⇢ extractImageUrls() (parse HTML response)
+  ⇢ pollForResults() (GET loop until ready, pollUntil in shared/http.ts)
+  ⇢ extractImageUrls() (parse and normalize the HTML response)
   ⇢ return ImageResult[]
 ```
 
 ## Code style
 
-Use Biome for formatting and linting, not ESLint or Prettier. The configuration
-enforces double quotes, two-space indent, and 80 character line width. Import
+Use Biome for formatting and linting TypeScript and JSON, not ESLint. The
+configuration enforces double quotes, two-space indent, and 80 character line
+width. Prettier, run through `bunx`, formats Markdown and YAML. Import
 statements must include `.ts` extensions.
 
-Prefer `as const` objects for enums instead of TypeScript enums. See `Model` and
+Prefer string-literal union types instead of TypeScript enums. See `Model` and
 `AspectRatio` in `types.ts` for examples. Avoid classes in favor of plain
 functions and interfaces. Throw descriptive error messages with enough context
 for debugging.
@@ -211,11 +219,11 @@ GPT-4o and MAI-Image-1 take 20-70 seconds.
 
 When Bing adds new models, update the library in three places:
 
-1. Add the model to the `Model` const in `types.ts`
-2. Add an entry to `MODEL_CONFIGS` with the `mdl` value, `expectedImages` count,
-   and `aspectRatios` mapping
-3. Test with both single and multiple image outputs to verify the expected count
+1. Add the model name to the `Model` type in `types.ts`
+2. Add an entry to `MODEL_CONFIGS` in `constants.ts` with the `mdl` value and
+   the `aspectRatioMap`
+3. Run the integration tests with a real cookie to confirm the `mdl` and `ar`
+   values
 
-The aspect ratio mapping should follow the pattern established by existing
-models, using integers 1, 2, and 3 for square, landscape, and portrait
-respectively.
+The aspect ratio map should follow the pattern established by existing models,
+using integers 1, 2, and 3 for square, landscape, and portrait respectively.
