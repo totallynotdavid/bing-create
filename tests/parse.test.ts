@@ -1,25 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { extractRequestId, extractImageUrls } from "../src/image/parse.ts";
-
-describe("extractRequestId", () => {
-  test("extracts ID from redirect URL", () => {
-    const url = "/images/create?q=test&id=1-abc123def&FORM=GENCRE";
-    expect(extractRequestId(url)).toBe("1-abc123def");
-  });
-
-  test("extracts ID when id is first param", () => {
-    const url = "?id=xyz789&q=test";
-    expect(extractRequestId(url)).toBe("xyz789");
-  });
-
-  test("throws when no id param exists", () => {
-    expect(() => extractRequestId("?q=test&foo=bar")).toThrow("Failed to extract request ID");
-  });
-
-  test("throws when id is empty", () => {
-    expect(() => extractRequestId("?id=&q=test")).toThrow("Failed to extract request ID");
-  });
-});
+import { extractImageUrls } from "../src/image/parse.ts";
 
 describe("extractImageUrls", () => {
   test("extracts multiple image URLs from HTML", () => {
@@ -47,7 +27,14 @@ describe("extractImageUrls", () => {
   });
 
   test("throws when no images found", () => {
-    expect(() => extractImageUrls("<div>no images here</div>")).toThrow("No images found");
+    expect(() => extractImageUrls("<div>no images here</div>")).toThrow(
+      "No images found",
+    );
+  });
+
+  test("throws when every src is filtered out", () => {
+    const html = '<img src="https://www.bing.com/th/id/icon.svg"/>';
+    expect(() => extractImageUrls(html)).toThrow("No images found");
   });
 
   test("throws on empty HTML", () => {

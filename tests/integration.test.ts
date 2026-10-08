@@ -22,7 +22,9 @@ describe.skipIf(!shouldRun)("integration: real API calls", () => {
       for (const result of results) {
         expect(result.url).toStartWith("https://www.bing.com/th/id/");
         expect(result.url).toContain("?pid=ImgGn");
-        expect(result.suggestedFilename).toMatch(/^a-small-blue-square_\d+\.jpg$/);
+        expect(result.suggestedFilename).toMatch(
+          /^a-small-blue-square_\d+\.jpg$/,
+        );
 
         const response = await fetch(result.url, { method: "HEAD" });
         expect(response.ok).toBe(true);
@@ -44,14 +46,11 @@ describe.skipIf(!shouldRun)("integration: real API calls", () => {
         timeouts: { pollingMs: 2_000 },
       });
 
-      if (!results[0]) return;
-
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].url).toStartWith("https://www.bing.com/th/id/");
+      expect(results[0]?.url).toStartWith("https://www.bing.com/th/id/");
     },
     { timeout: 120_000 },
   );
-
 });
 
 describe.skipIf(!shouldRun)("integration: video API", () => {
