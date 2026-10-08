@@ -1,10 +1,11 @@
+import { isBingUrl } from "../shared/url.ts";
+
 export function normalizeUrls(rawUrls: string[]): string[] {
-  return [...new Set(
-    rawUrls
-      .map(decodeHtmlEntities)
-      .map(normalizeUrl)
-      .filter(isImageUrl)
-  )];
+  return [
+    ...new Set(
+      rawUrls.map(decodeHtmlEntities).map(normalizeUrl).filter(isImageUrl),
+    ),
+  ];
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -43,10 +44,16 @@ function normalizeUrl(url: string): string {
 }
 
 function isImageUrl(url: string): boolean {
-  const lower = url.toLowerCase();
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
 
-  if (lower.endsWith(".js") || lower.includes(".br.js")) return false;
-  if (lower.endsWith(".svg")) return false;
+  const path = parsed.pathname.toLowerCase();
 
-  return lower.includes("bing.com/th/id/");
+  if (path.endsWith(".js") || path.endsWith(".svg")) return false;
+
+  return isBingUrl(parsed) && path.startsWith("/th/id/");
 }

@@ -1,16 +1,13 @@
-export function extractRequestId(redirectUrl: string): string {
-  const match = redirectUrl.match(/[?&]id=([^&]+)/);
-  if (!match?.[1]) {
-    throw new Error(`Failed to extract request ID from: ${redirectUrl}`);
-  }
-  return match[1];
-}
+import { normalizeUrls } from "./url.ts";
 
+/** Returns normalized image URLs or throws when no usable URL remains. */
 export function extractImageUrls(html: string): string[] {
   const srcPattern = /src="([^"]+)"/g;
-  const urls = [...html.matchAll(srcPattern)]
+  const rawUrls = [...html.matchAll(srcPattern)]
     .map((match) => match[1])
     .filter((url): url is string => url !== undefined);
+
+  const urls = normalizeUrls(rawUrls);
 
   if (urls.length === 0) {
     throw new Error("No images found in response");
