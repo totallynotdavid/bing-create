@@ -1,3 +1,5 @@
+import { isBingUrl } from "../shared/url.ts";
+
 export function normalizeVideoUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -13,6 +15,10 @@ export function normalizeVideoUrl(url: string): string {
 export function isSolidVideoUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
+    if (!isBingUrl(parsed)) {
+      return false;
+    }
+
     const pid = parsed.searchParams.get("pid")?.toLowerCase();
     if (pid !== "videocreator") {
       return false;
