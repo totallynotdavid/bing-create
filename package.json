@@ -26,17 +26,20 @@
     "readme.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "clean": "bun x shx rm -rf dist",
-    "check": "biome check . && bun x prettier \"**/*.{md,yml}\" --write --print-width=80 --prose-wrap=always",
-    "build": "bun run check && bun x bunup",
+    "check": "biome check . && bunx prettier --check --print-width 80 --prose-wrap always '**/*.{md,yml}'",
+    "format": "biome check --write . && bunx prettier --write --print-width 80 --prose-wrap always '**/*.{md,yml}'",
+    "build": "bun x bunup",
     "test": "bun --env-file=.env test",
     "prepublishOnly": "bun run clean && bun run build"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "bunup": "^0.16.32",
-    "prettier": "^3.9.9",
     "shx": "^0.4.0"
   }
 }

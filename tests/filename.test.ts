@@ -3,11 +3,15 @@ import { generateFilename } from "../src/image/filename.ts";
 
 describe("generateFilename", () => {
   test("converts prompt to lowercase slug", () => {
-    expect(generateFilename("A Simple Red Circle", 0)).toBe("a-simple-red-circle_0.jpg");
+    expect(generateFilename("A Simple Red Circle", 0)).toBe(
+      "a-simple-red-circle_0.jpg",
+    );
   });
 
   test("replaces non-alphanumeric chars with hyphens", () => {
-    expect(generateFilename("hello! @world# $test%", 1)).toBe("hello-world-test_1.jpg");
+    expect(generateFilename("hello! @world# $test%", 1)).toBe(
+      "hello-world-test_1.jpg",
+    );
   });
 
   test("collapses consecutive special chars into single hyphen", () => {
@@ -21,12 +25,15 @@ describe("generateFilename", () => {
   });
 
   test("truncates slug to 50 chars", () => {
-    const longPrompt = "this is a very long prompt that should be truncated because it exceeds fifty characters";
+    const longPrompt =
+      "this is a very long prompt that should be truncated because it exceeds fifty characters";
     const filename = generateFilename(longPrompt, 0);
     const slug = filename.replace(/_\d+\.jpg$/, "");
 
     expect(slug.length).toBeLessThanOrEqual(50);
-    expect(filename).toBe("this-is-a-very-long-prompt-that-should-be-truncate_0.jpg");
+    expect(filename).toBe(
+      "this-is-a-very-long-prompt-that-should-be-truncate_0.jpg",
+    );
   });
 
   test("handles empty or whitespace prompts", () => {
