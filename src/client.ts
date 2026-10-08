@@ -4,10 +4,10 @@ import type {
   ImageResult,
   VideoAspectRatio,
 } from "./types.ts";
-import { MODEL_CONFIGS, DEFAULT_TIMEOUTS } from "./constants.ts";
+import { MODEL_CONFIGS } from "./constants.ts";
+import { resolveTimeouts, validate } from "./shared/options.ts";
 import { initiateGeneration, pollForResults } from "./image/generate.ts";
 import { extractImageUrls } from "./image/parse.ts";
-import { normalizeUrls } from "./image/url.ts";
 import { generateFilename } from "./image/filename.ts";
 import { initiateVideoGeneration, pollForVideoUrl } from "./video/generate.ts";
 
@@ -20,29 +20,20 @@ export async function createImages(
   prompt: string,
   options: CreateImagesOptions,
 ): Promise<ImageResult[]> {
-  if (!prompt?.trim()) {
-    throw new Error("Prompt must be a non-empty string");
-  }
-  if (!options.cookie?.trim()) {
-    throw new Error("options.cookie is required and must be a non-empty string");
-  }
+  validate(prompt, options.cookie);
 
   const model = options.model ?? "dalle3";
   const aspectRatio = options.aspectRatio ?? "square";
   const config = MODEL_CONFIGS[model];
-
-  const timeouts = {
-    generation: options.timeouts?.generationMs ?? DEFAULT_TIMEOUTS.GENERATION_MS,
-    polling: options.timeouts?.pollingMs ?? DEFAULT_TIMEOUTS.POLLING_MS,
-    request: options.timeouts?.requestMs ?? DEFAULT_TIMEOUTS.REQUEST_MS,
-  };
+  const ar = config.aspectRatioMap[aspectRatio];
+  const timeouts = resolveTimeouts(options.timeouts);
 
   const requestId = await initiateGeneration(
     prompt,
     options.cookie,
     config.mdl,
-    config.aspectRatioMap[aspectRatio],
-    timeouts.request,
+    ar,
+    timeouts.requestMs,
   );
 
   const html = await pollForResults(
@@ -50,16 +41,11 @@ export async function createImages(
     requestId,
     options.cookie,
     config.mdl,
-    config.aspectRatioMap[aspectRatio],
-    timeouts.generation,
-    timeouts.polling,
-    timeouts.request,
+    ar,
+    timeouts,
   );
 
-  const rawUrls = extractImageUrls(html);
-  const cleanUrls = normalizeUrls(rawUrls);
-
-  return cleanUrls.map((url, index) => ({
+  return extractImageUrls(html).map((url, index) => ({
     url,
     suggestedFilename: generateFilename(prompt, index),
   }));
@@ -69,36 +55,18 @@ export async function createVideo(
   prompt: string,
   options: CreateVideoOptions,
 ): Promise<string> {
-  if (!prompt?.trim()) {
-    throw new Error("Prompt must be a non-empty string");
-  }
-  if (!options.cookie?.trim()) {
-    throw new Error("options.cookie is required and must be a non-empty string");
-  }
+  validate(prompt, options.cookie);
 
   const aspectRatio = options.aspectRatio ?? "portrait";
   const ar = VIDEO_ASPECT_RATIO_MAP[aspectRatio];
-
-  const timeouts = {
-    generation: options.timeouts?.generationMs ?? DEFAULT_TIMEOUTS.GENERATION_MS,
-    polling: options.timeouts?.pollingMs ?? DEFAULT_TIMEOUTS.POLLING_MS,
-    request: options.timeouts?.requestMs ?? DEFAULT_TIMEOUTS.REQUEST_MS,
-  };
+  const timeouts = resolveTimeouts(options.timeouts);
 
   const requestId = await initiateVideoGeneration(
     prompt,
     options.cookie,
     ar,
-    timeouts.request,
+    timeouts.requestMs,
   );
 
-  return pollForVideoUrl(
-    prompt,
-    requestId,
-    options.cookie,
-    ar,
-    timeouts.generation,
-    timeouts.polling,
-    timeouts.request,
-  );
+  return pollForVideoUrl(prompt, requestId, options.cookie, ar, timeouts);
 }

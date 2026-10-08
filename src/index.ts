@@ -5,5 +5,6 @@ export type {
   ImageResult,
   Model,
   AspectRatio,
+  Timeouts,
   VideoAspectRatio,
 } from "./types.ts";

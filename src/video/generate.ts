@@ -1,9 +1,9 @@
-import { extractRequestId } from "../image/parse.ts";
-import { fetchWithTimeout, sleep } from "../shared/http.ts";
-import { extractVideoUrl } from "./parse.ts";
-import { isPendingMessage } from "./parse.ts";
+import { getText, pollUntil } from "../shared/http.ts";
+import type { ResolvedTimeouts } from "../shared/options.ts";
+import { startGeneration } from "../shared/request.ts";
+import { extractVideoUrl, isPendingMessage } from "./parse.ts";
 
-export async function initiateVideoGeneration(
+export function initiateVideoGeneration(
   prompt: string,
   cookie: string,
   ar: number,
@@ -11,27 +11,20 @@ export async function initiateVideoGeneration(
 ): Promise<string> {
   const url = `https://www.bing.com/images/create/ai-video-generator?q=${encodeURIComponent(prompt)}&rt=4&mdl=0&ar=${ar}&FORM=GENCRE&hva=4&pt=4&sm=1`;
 
-  const response = await fetchWithTimeout(url, cookie, timeoutMs, "POST");
-
-  const redirectUrl = response.headers.get("location");
-  if (!redirectUrl) {
-    throw new Error("No redirect from Bing. Cookie may be invalid or expired.");
-  }
-
-  return extractRequestId(redirectUrl);
+  return startGeneration(url, cookie, timeoutMs);
 }
 
-export async function pollForVideoUrl(
+export function pollForVideoUrl(
   prompt: string,
   requestId: string,
   cookie: string,
   ar: number,
-  generationTimeoutMs: number,
-  pollIntervalMs: number,
-  requestTimeoutMs: number,
+  timeouts: ResolvedTimeouts,
 ): Promise<string> {
   const asyncPollingUrl = `https://www.bing.com/images/create/async/results/${requestId}?q=${encodeURIComponent(prompt)}&mdl=0&ar=${ar}`;
-  const resultUrl = new URL("https://www.bing.com/images/create/ai-video-generator");
+  const resultUrl = new URL(
+    "https://www.bing.com/images/create/ai-video-generator",
+  );
   resultUrl.searchParams.set("q", prompt);
   resultUrl.searchParams.set("id", requestId);
   resultUrl.searchParams.set("rt", "4");
@@ -39,29 +32,8 @@ export async function pollForVideoUrl(
   resultUrl.searchParams.set("FORM", "GUH2CR");
   resultUrl.searchParams.set("dmreload", "1");
 
-  const startTime = Date.now();
-
-  while (true) {
-    const elapsed = Date.now() - startTime;
-    if (elapsed >= generationTimeoutMs) {
-      throw new Error(`Video generation timed out after ${generationTimeoutMs / 1000}s`);
-    }
-
-    const remainingTime = generationTimeoutMs - elapsed;
-    const timeoutForThisRequest = Math.min(requestTimeoutMs, remainingTime);
-
-    const asyncResponse = await fetchWithTimeout(
-      asyncPollingUrl,
-      cookie,
-      timeoutForThisRequest,
-      "GET",
-    );
-
-    if (!asyncResponse.ok) {
-      throw new Error(`HTTP ${asyncResponse.status}: ${asyncResponse.statusText}`);
-    }
-
-    const asyncText = await asyncResponse.text();
+  return pollUntil("Video", timeouts, async (requestTimeoutMs) => {
+    const asyncText = await getText(asyncPollingUrl, cookie, requestTimeoutMs);
     const videoFromAsync = extractVideoUrl(asyncText);
     if (videoFromAsync) {
       return videoFromAsync;
@@ -74,23 +46,11 @@ export async function pollForVideoUrl(
       }
     }
 
-    const resultResponse = await fetchWithTimeout(
+    const resultText = await getText(
       resultUrl.toString(),
       cookie,
-      timeoutForThisRequest,
-      "GET",
+      requestTimeoutMs,
     );
-
-    if (!resultResponse.ok) {
-      throw new Error(`HTTP ${resultResponse.status}: ${resultResponse.statusText}`);
-    }
-
-    const resultText = await resultResponse.text();
-    const videoFromResult = extractVideoUrl(resultText);
-    if (videoFromResult) {
-      return videoFromResult;
-    }
-
-    await sleep(pollIntervalMs);
-  }
+    return extractVideoUrl(resultText) ?? undefined;
+  });
 }
