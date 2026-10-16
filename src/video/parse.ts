@@ -1,5 +1,21 @@
 import { normalizeVideoUrl, isSolidVideoUrl } from "./url.ts";
 
+const ESCAPE_REPLACEMENTS: Record<string, string> = {
+  "&amp;": "&",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
+};
+
+function decodeEscapeSequence(value: string): string {
+  if (value === "\\u0026") {
+    return "&";
+  }
+
+  return ESCAPE_REPLACEMENTS[value] ?? value;
+}
+
 export function extractVideoUrl(text: string): string | null {
   if (!text) {
     return null;
@@ -7,12 +23,7 @@ export function extractVideoUrl(text: string): string | null {
 
   const decoded = text
     .replace(/\\\//g, "/")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\\u0026/gi, "&");
+    .replace(/\\u0026|&(?:amp|quot|#39|lt|gt);/g, decodeEscapeSequence);
 
   for (const match of decoded.matchAll(/\bourl="([^"]+)"/gi)) {
     const rawUrl = match[1]?.trim();
