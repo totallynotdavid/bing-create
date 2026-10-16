@@ -46,4 +46,10 @@ describe("generateFilename", () => {
     expect(generateFilename("image 123 test", 0)).toBe("image-123-test_0.jpg");
     expect(generateFilename("123", 0)).toBe("123_0.jpg");
   });
+
+  test("handles a long run of hyphens", () => {
+    expect(generateFilename(`${"-".repeat(100_000)}image`, 0)).toBe(
+      "image_0.jpg",
+    );
+  });
 });

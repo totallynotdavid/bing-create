@@ -46,6 +46,22 @@ describe("extractVideoUrl", () => {
     );
   });
 
+  test("preserves an escaped entity during decoding", () => {
+    const html =
+      'ourl="https://th.bing.com/th/id/OVID.entity?x=1&amp;quot;label&amp;pid=videocreator"';
+    expect(extractVideoUrl(html)).toBe(
+      "https://th.bing.com/th/id/OVID.entity?x=1&quot;label&pid=videocreator",
+    );
+  });
+
+  test("leaves uppercase HTML entities unchanged", () => {
+    const html =
+      'ourl="https://th.bing.com/th/id/OVID.upper?x=1&AMP;label=2&pid=videocreator"';
+    expect(extractVideoUrl(html)).toBe(
+      "https://th.bing.com/th/id/OVID.upper?x=1&AMP;label=2&pid=videocreator",
+    );
+  });
+
   test("normalizes CDN hostname of matched URL", () => {
     const html =
       'ourl="https://tse4.mm.bing.net/th/id/OVID.abc?pid=videocreator"';
