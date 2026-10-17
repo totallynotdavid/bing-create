@@ -1,109 +1,76 @@
 import { describe, test, expect } from "bun:test";
 import { extractVideoUrl, isPendingMessage } from "../src/video/parse.ts";
 
+const base = "https://th.bing.com/th/id/OVID.abc";
+
 describe("extractVideoUrl", () => {
-  test("extracts URL from ourl attribute", () => {
-    const html =
-      '<div class="vidgn" ourl="https://th.bing.com/th/id/OVID.abc?pid=videocreator"></div>';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.abc?pid=videocreator",
-    );
+  test.each([
+    [
+      "an ourl attribute",
+      `<div class="vidgn" ourl="${base}?pid=videocreator"></div>`,
+      `${base}?pid=videocreator`,
+    ],
+    [
+      "backslash-escaped slashes",
+      'ourl="https:\\/\\/th.bing.com\\/th\\/id\\/OVID.abc?pid=videocreator"',
+      `${base}?pid=videocreator`,
+    ],
+    [
+      "a \\u0026 escape",
+      `ourl="${base}?a=1\\u0026pid=videocreator"`,
+      `${base}?a=1&pid=videocreator`,
+    ],
+    [
+      "HTML entities",
+      `ourl="${base}?a=1&amp;pid=videocreator"`,
+      `${base}?a=1&pid=videocreator`,
+    ],
+    [
+      "an entity inside an already escaped ampersand, decoded once",
+      `ourl="${base}?x=1\\u0026amp;y=2\\u0026pid=videocreator"`,
+      `${base}?x=1&amp;y=2&pid=videocreator`,
+    ],
+    [
+      "a nested entity, decoded once",
+      `ourl="${base}?x=1&amp;quot;label&amp;pid=videocreator"`,
+      `${base}?x=1&quot;label&pid=videocreator`,
+    ],
+    [
+      "uppercase entities, left as they are",
+      `ourl="${base}?x=1&AMP;label=2&pid=videocreator"`,
+      `${base}?x=1&AMP;label=2&pid=videocreator`,
+    ],
+    [
+      "a CDN host, rewritten to th.bing.com",
+      'ourl="https://tse4.mm.bing.net/th/id/OVID.abc?pid=videocreator"',
+      `${base}?pid=videocreator`,
+    ],
+  ])("returns the URL from %s", (_name, text, expected) => {
+    expect(extractVideoUrl(text)).toBe(expected);
   });
 
-  test("unescapes backslash-escaped slashes", () => {
-    const html =
-      'ourl="https:\\/\\/th.bing.com\\/th\\/id\\/OVID.abc?pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.abc?pid=videocreator",
-    );
-  });
-
-  test("unescapes \\u0026 to an ampersand", () => {
-    const html =
-      'ourl="https://th.bing.com/th/id/OVID.abc?a=1\\u0026pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.abc?a=1&pid=videocreator",
-    );
-  });
-
-  test("decodes HTML entities", () => {
-    const html =
-      'ourl="https://th.bing.com/th/id/OVID.abc?a=1&amp;pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.abc?a=1&pid=videocreator",
-    );
-  });
-
-  test("does not double-unescape &amp; combined with \\u0026 (regression)", () => {
-    // Mirrors what Bing serves when an already-entity-escaped ampersand is
-    // itself wrapped in a backslash-u0026 unicode escape. Unescaping that
-    // escape before &amp; would collapse "&amp;" down to a bare "&", losing
-    // a layer of escaping that was never actually double-encoded.
-    const html =
-      'ourl="https://th.bing.com/th/id/OVID.dbl?x=1\\u0026amp;y=2\\u0026pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.dbl?x=1&amp;y=2&pid=videocreator",
-    );
-  });
-
-  test("preserves an escaped entity during decoding", () => {
-    const html =
-      'ourl="https://th.bing.com/th/id/OVID.entity?x=1&amp;quot;label&amp;pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.entity?x=1&quot;label&pid=videocreator",
-    );
-  });
-
-  test("leaves uppercase HTML entities unchanged", () => {
-    const html =
-      'ourl="https://th.bing.com/th/id/OVID.upper?x=1&AMP;label=2&pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.upper?x=1&AMP;label=2&pid=videocreator",
-    );
-  });
-
-  test("normalizes CDN hostname of matched URL", () => {
-    const html =
-      'ourl="https://tse4.mm.bing.net/th/id/OVID.abc?pid=videocreator"';
-    expect(extractVideoUrl(html)).toBe(
-      "https://th.bing.com/th/id/OVID.abc?pid=videocreator",
-    );
-  });
-
-  test("returns null when no solid video URL is present", () => {
-    expect(
-      extractVideoUrl('ourl="https://th.bing.com/th/id/OVID.abc?pid=ImgGn"'),
-    ).toBeNull();
-    expect(
-      extractVideoUrl(
-        'ourl="https://th.bing.com/th/id/OVID.abc?w=100&pid=videocreator"',
-      ),
-    ).toBeNull();
-  });
-
-  test("returns null on empty input", () => {
-    expect(extractVideoUrl("")).toBeNull();
-  });
-
-  test("returns null when no ourl attribute is found", () => {
-    expect(extractVideoUrl("<div>still generating</div>")).toBeNull();
+  test.each([
+    ["empty input", ""],
+    ["no ourl attribute", "<div>still generating</div>"],
+    ["a pid other than videocreator", `ourl="${base}?pid=ImgGn"`],
+    ["a thumbnail parameter", `ourl="${base}?w=100&pid=videocreator"`],
+  ])("returns null for %s", (_name, text) => {
+    expect(extractVideoUrl(text)).toBeNull();
   });
 });
 
 describe("isPendingMessage", () => {
-  test("matches 'pending' case-insensitively with surrounding whitespace", () => {
-    expect(isPendingMessage("pending")).toBe(true);
-    expect(isPendingMessage("Pending")).toBe(true);
-    expect(isPendingMessage("  PENDING  ")).toBe(true);
+  test.each([
+    "pending",
+    "Pending",
+    "  PENDING  ",
+    "still pending",
+    " Still Pending ",
+  ])("matches %p", (message) => {
+    expect(isPendingMessage(message)).toBe(true);
   });
 
-  test("matches 'still pending' case-insensitively with surrounding whitespace", () => {
-    expect(isPendingMessage("still pending")).toBe(true);
-    expect(isPendingMessage("  Still Pending  ")).toBe(true);
-  });
-
-  test("does not match other messages", () => {
-    expect(isPendingMessage("error: bad request")).toBe(false);
-    expect(isPendingMessage("")).toBe(false);
+  test.each(["error: bad request", ""])("does not match %p", (message) => {
+    expect(isPendingMessage(message)).toBe(false);
   });
 });

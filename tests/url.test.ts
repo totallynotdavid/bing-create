@@ -1,139 +1,54 @@
-import { describe, test, expect } from "bun:test";
+import { test, expect } from "bun:test";
 import { normalizeUrls } from "../src/image/url.ts";
 
-describe("normalizeUrls", () => {
-  test("converts CDN URLs to www.bing.com", () => {
-    const raw = [
-      "https://tse3.mm.bing.net/th/id/OIG4.test?pid=ImgGn",
-      "https://tse1.mm.bing.net/th/id/OIG4.test2?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
+const real = "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn";
+const realNormalized = "https://www.bing.com/th/id/OIG4.real?pid=ImgGn";
 
-    expect(normalized).toHaveLength(2);
-    for (const url of normalized) {
-      expect(url).toStartWith("https://www.bing.com/th/id/");
-      expect(url).not.toContain("tse");
-    }
-  });
-
-  test("strips extra query params, keeps only pid", () => {
-    const raw = [
-      "https://tse3.mm.bing.net/th/id/OIG4.test?w=270&h=270&c=6&r=0&o=5&pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized[0]).toBe(
-      "https://www.bing.com/th/id/OIG4.test?pid=ImgGn",
-    );
-  });
-
-  test("decodes HTML entities", () => {
-    const raw = [
-      "https://tse1.mm.bing.net/th/id/OIG4.test?w=270&amp;pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized[0]).not.toContain("&amp;");
-    expect(normalized[0]).toContain("?pid=ImgGn");
-  });
-
-  test("converts relative URLs to absolute", () => {
-    const raw = ["/th/id/OIG4.relative?pid=ImgGn"];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized[0]).toBe(
-      "https://www.bing.com/th/id/OIG4.relative?pid=ImgGn",
-    );
-  });
-
-  test("adds pid=ImgGn when missing", () => {
-    const raw = ["https://www.bing.com/th/id/OIG4.nopid"];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized[0]).toBe(
-      "https://www.bing.com/th/id/OIG4.nopid?pid=ImgGn",
-    );
-  });
-
-  test("deduplicates identical URLs", () => {
-    const raw = [
-      "https://tse1.mm.bing.net/th/id/OIG4.same?pid=ImgGn",
-      "https://tse1.mm.bing.net/th/id/OIG4.same?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toHaveLength(1);
-  });
-
-  test("filters out .js files", () => {
-    const raw = [
-      "https://r.bing.com/script.js",
+test.each([
+  [
+    "rewrites the CDN host, decodes entities and keeps only pid",
+    [
+      "https://tse3.mm.bing.net/th/id/OIG4.a?w=270&amp;h=270&amp;c=6&amp;r=0&amp;o=5&amp;pid=ImgGn",
+    ],
+    ["https://www.bing.com/th/id/OIG4.a?pid=ImgGn"],
+  ],
+  [
+    "decodes the JSON escape of an ampersand",
+    [`/th/id/OIG4.json?w=1${"\\"}${"u0026"}pid=ImgGn`],
+    ["https://www.bing.com/th/id/OIG4.json?pid=ImgGn"],
+  ],
+  [
+    "makes a relative URL absolute",
+    ["/th/id/OIG4.relative?pid=ImgGn"],
+    ["https://www.bing.com/th/id/OIG4.relative?pid=ImgGn"],
+  ],
+  [
+    "adds pid=ImgGn when missing",
+    ["https://www.bing.com/th/id/OIG4.nopid"],
+    ["https://www.bing.com/th/id/OIG4.nopid?pid=ImgGn"],
+  ],
+  ["removes duplicates", [real, real], [realNormalized]],
+  [
+    "drops .js and .svg files",
+    [
       "https://r.bing.com/script.br.js",
-      "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toHaveLength(1);
-    expect(normalized[0]).toContain("OIG4.real");
-  });
-
-  test("filters out .js and .svg files under the image path", () => {
-    const raw = [
       "https://www.bing.com/th/id/script.js",
-      "https://www.bing.com/th/id/script.br.js",
-      "https://www.bing.com/th/id/icon.svg",
       "/th/id/icon.SVG",
-      "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toEqual([
-      "https://www.bing.com/th/id/OIG4.real?pid=ImgGn",
-    ]);
-  });
-
-  test("filters out URLs outside bing.com/th/id/", () => {
-    const raw = [
+      real,
+    ],
+    [realNormalized],
+  ],
+  [
+    "drops URLs outside https bing.com/th/id/",
+    [
       "https://evilbing.com/th/id/OIG4.fake?pid=ImgGn",
       "https://www.bing.com/rp/OIG4.fake?pid=ImgGn",
+      "http://www.bing.com/th/id/OIG4.plain",
       "/static/logo.png",
-      "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toEqual([
-      "https://www.bing.com/th/id/OIG4.real?pid=ImgGn",
-    ]);
-  });
-
-  test("filters out non-https URLs", () => {
-    expect(normalizeUrls(["http://www.bing.com/th/id/OIG4.plain"])).toEqual([]);
-  });
-
-  test("filters out .svg files", () => {
-    const raw = [
-      "https://www.bing.com/icon.svg",
-      "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toHaveLength(1);
-    expect(normalized[0]).toContain("OIG4.real");
-  });
-
-  test("handles DALL-E 3 URLs end-to-end", () => {
-    const raw = [
-      "https://tse3.mm.bing.net/th/id/OIG4.HfM5lIwyCttDOzJbyOCW?w=270&amp;h=270&amp;c=6&amp;r=0&amp;o=5&amp;pid=ImgGn",
-      "https://tse4.mm.bing.net/th/id/OIG4.KlXYym2JqxlbBaa398Dm?w=270&amp;h=270&amp;c=6&amp;r=0&amp;o=5&amp;pid=ImgGn",
-    ];
-    const normalized = normalizeUrls(raw);
-
-    expect(normalized).toHaveLength(2);
-    expect(normalized[0]).toBe(
-      "https://www.bing.com/th/id/OIG4.HfM5lIwyCttDOzJbyOCW?pid=ImgGn",
-    );
-    expect(normalized[1]).toBe(
-      "https://www.bing.com/th/id/OIG4.KlXYym2JqxlbBaa398Dm?pid=ImgGn",
-    );
-  });
+      real,
+    ],
+    [realNormalized],
+  ],
+])("normalizeUrls %s", (_name, raw, expected) => {
+  expect(normalizeUrls(raw)).toEqual(expected);
 });

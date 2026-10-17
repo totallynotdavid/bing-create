@@ -1,78 +1,41 @@
 import { describe, test, expect } from "bun:test";
 import { normalizeVideoUrl, isSolidVideoUrl } from "../src/video/url.ts";
 
+const solid = "https://th.bing.com/th/id/OVID.test?pid=videocreator";
+
 describe("normalizeVideoUrl", () => {
-  test("converts CDN URLs to th.bing.com", () => {
-    const normalized = normalizeVideoUrl(
-      "https://tse3.mm.bing.net/th/id/OVID.test?pid=videocreator",
-    );
-    expect(normalized).toBe(
-      "https://th.bing.com/th/id/OVID.test?pid=videocreator",
-    );
-  });
-
-  test("leaves non-CDN hostnames untouched", () => {
-    const url = "https://th.bing.com/th/id/OVID.test?pid=videocreator";
-    expect(normalizeVideoUrl(url)).toBe(url);
-  });
-
-  test("returns the input unchanged when it is not a valid URL", () => {
-    expect(normalizeVideoUrl("not a url")).toBe("not a url");
+  test.each([
+    ["https://tse3.mm.bing.net/th/id/OVID.test?pid=videocreator", solid],
+    [solid, solid],
+    ["not a url", "not a url"],
+  ])("normalizes %s", (url, expected) => {
+    expect(normalizeVideoUrl(url)).toBe(expected);
   });
 });
 
 describe("isSolidVideoUrl", () => {
-  test("accepts a URL with only pid=videocreator", () => {
-    expect(
-      isSolidVideoUrl("https://th.bing.com/th/id/OVID.test?pid=videocreator"),
-    ).toBe(true);
+  test.each([
+    solid,
+    "https://th.bing.com/th/id/OVID.test?pid=VideoCreator",
+    "https://www.bing.com/th/id/OVID.x?pid=videocreator",
+    "https://bing.com/th/id/OVID.x?pid=videocreator",
+  ])("accepts %s", (url) => {
+    expect(isSolidVideoUrl(url)).toBe(true);
   });
 
-  test("matches pid case-insensitively", () => {
-    expect(
-      isSolidVideoUrl("https://th.bing.com/th/id/OVID.test?pid=VideoCreator"),
-    ).toBe(true);
-  });
-
-  test("rejects when pid is missing or different", () => {
-    expect(isSolidVideoUrl("https://th.bing.com/th/id/OVID.test")).toBe(false);
-    expect(
-      isSolidVideoUrl("https://th.bing.com/th/id/OVID.test?pid=ImgGn"),
-    ).toBe(false);
-  });
-
-  test("rejects thumbnail-sized results carrying crop or quality params", () => {
-    for (const param of ["w", "h", "c", "rs", "qlt", "o"]) {
-      const url = `https://th.bing.com/th/id/OVID.test?${param}=1&pid=videocreator`;
-      expect(isSolidVideoUrl(url)).toBe(false);
-    }
-  });
-
-  test("rejects invalid URLs", () => {
-    expect(isSolidVideoUrl("not a url")).toBe(false);
-  });
-
-  test("accepts any bing.com subdomain over https", () => {
-    for (const host of ["th.bing.com", "www.bing.com", "bing.com"]) {
-      expect(
-        isSolidVideoUrl(`https://${host}/th/id/OVID.x?pid=videocreator`),
-      ).toBe(true);
-    }
-  });
-
-  test("rejects hosts that are not Bing", () => {
-    for (const url of [
-      "https://example.com/?pid=videocreator",
-      "https://evilbing.com/th/id/OVID.x?pid=videocreator",
-      "https://th.bing.com.evil.test/th/id/OVID.x?pid=videocreator",
-    ]) {
-      expect(isSolidVideoUrl(url)).toBe(false);
-    }
-  });
-
-  test("rejects non-https URLs", () => {
-    expect(
-      isSolidVideoUrl("http://th.bing.com/th/id/OVID.x?pid=videocreator"),
-    ).toBe(false);
+  test.each([
+    "https://th.bing.com/th/id/OVID.test",
+    "https://th.bing.com/th/id/OVID.test?pid=ImgGn",
+    ...["w", "h", "c", "rs", "qlt", "o"].map(
+      (param) =>
+        `https://th.bing.com/th/id/OVID.test?${param}=1&pid=videocreator`,
+    ),
+    "https://example.com/?pid=videocreator",
+    "https://evilbing.com/th/id/OVID.x?pid=videocreator",
+    "https://th.bing.com.evil.test/th/id/OVID.x?pid=videocreator",
+    "http://th.bing.com/th/id/OVID.x?pid=videocreator",
+    "not a url",
+  ])("rejects %s", (url) => {
+    expect(isSolidVideoUrl(url)).toBe(false);
   });
 });

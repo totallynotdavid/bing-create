@@ -41,26 +41,11 @@ describe("createImages", () => {
     ]);
   });
 
-  test("drops .js and .svg assets served from the image path", async () => {
+  test("drops .js and .svg assets, with or without a query string", async () => {
     stubImages(() =>
       imageHtml(
         "https://www.bing.com/th/id/icon.svg",
-        "https://www.bing.com/th/id/script.js",
         "https://www.bing.com/th/id/script.br.js",
-        "https://tse1.mm.bing.net/th/id/OIG4.real?pid=ImgGn",
-      ),
-    );
-
-    const results = await createImages("test", { cookie });
-
-    expect(results.map((r) => r.url)).toEqual([
-      "https://www.bing.com/th/id/OIG4.real?pid=ImgGn",
-    ]);
-  });
-
-  test("drops .js and .svg assets that carry a query string", async () => {
-    stubImages(() =>
-      imageHtml(
         "https://www.bing.com/th/id/icon.svg?w=10&amp;h=10",
         "https://tse2.mm.bing.net/th/id/script.br.js?pid=ImgGn",
         "/th/id/ICON.SVG?pid=ImgGn",
@@ -138,6 +123,34 @@ describe("createImages", () => {
       "No redirect from Bing",
     );
   });
+
+  test.each([["/images/create?q=x&id=1-abc&FORM=GENCRE"], ["?id=1-abc&q=x"]])(
+    "reads the request ID from the redirect %s",
+    async (location) => {
+      const { requests } = stubBing((_url, method) =>
+        method === "POST"
+          ? new Response(null, { status: 302, headers: { location } })
+          : new Response(imageHtml("/th/id/OIG4.one")),
+      );
+
+      await createImages("test", { cookie });
+
+      expect(requests).toContain("GET /images/create/async/results/1-abc");
+    },
+  );
+
+  test.each([["/images/create?q=x&foo=bar"], ["?id=&q=x"]])(
+    "rejects the redirect %s that carries no request ID",
+    (location) => {
+      stubBing(
+        () => new Response(null, { status: 302, headers: { location } }),
+      );
+
+      return expect(createImages("test", { cookie })).rejects.toThrow(
+        "Failed to extract request ID",
+      );
+    },
+  );
 });
 
 describe("createVideo", () => {
