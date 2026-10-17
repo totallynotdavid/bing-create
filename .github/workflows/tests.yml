@@ -19,13 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.2"
+      - uses: jdx/mise-action@v5
 
-      - run: bun install --frozen-lockfile
+      - run: mise run install
 
-      - run: bun test --coverage --coverage-reporter=lcov
+      - run: mise run test:coverage
         env:
           BING_COOKIE: ${{ secrets.BING_COOKIE }}
         timeout-minutes: 5
