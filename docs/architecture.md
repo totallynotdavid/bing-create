@@ -78,7 +78,7 @@ createVideo(prompt, options)            client.ts
 
 ## Tests
 
-`bun test` runs every file in `tests/`. `integration.test.ts` calls Bing and is
-skipped when `BING_COOKIE` is not set. The other files run offline.
-`tests/stub-bing.ts` replaces `fetch`, so `pipeline.test.ts` runs the whole flow
-of `createImages` and `createVideo` against canned responses.
+`mise run test` runs the offline files in `tests/`. `integration.test.ts` calls
+Bing through `mise run test:integration` and is skipped when `BING_COOKIE` is
+not set. `tests/stub-bing.ts` replaces `fetch`, so `pipeline.test.ts` runs the
+whole flow of `createImages` and `createVideo` against canned responses.

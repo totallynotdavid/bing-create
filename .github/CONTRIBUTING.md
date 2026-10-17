@@ -5,40 +5,41 @@ For the code layout, read [architecture](../docs/architecture.md).
 ## Set up
 
 Install [mise](https://mise.jdx.dev/getting-started.html). It installs the Bun
-and Biome versions pinned in `mise.toml`.
+and Node.js versions pinned in `mise.toml`.
 
 ```bash
 git clone https://github.com/totallynotdavid/bing-create.git
 cd bing-create
 mise install
-bun install
+mise run install
 ```
 
 ## Check a change
 
 ```bash
-bun test              # unit tests; integration tests skip without a cookie
-bun run check         # read-only: Biome lint and format, Prettier on md and yml
-bun run format        # rewrite files to pass check
-bun run build         # bunup builds dist/
-bun run clean         # remove dist/
+mise run check             # read-only: lint, typecheck, unit tests, build
+mise run fix               # rewrite files to pass lint
+mise run lint              # Biome on code and JSON, oxfmt on md and yml
+mise run typecheck         # tsc --noEmit
+mise run test              # unit tests, without the integration tests
+mise run test:integration  # calls Bing; needs a cookie
+mise run build             # bunup builds dist/
 ```
 
-`bun run test` is the same as `bun test` and also loads `.env`.
-
-CI runs `check`, `bun test` and `build` on every pull request and every push to
-`master`, and before a release is published.
+CI runs `check` on every pull request and every push to `master`, and before a
+release is published.
 
 The integration tests call Bing and need a cookie. Copy `.env.example` to
-`.env`, set `BING_COOKIE` ([how](../docs/authentication.md)) and run `bun test`.
-A weekly workflow runs them with a repository secret.
+`.env`, set `BING_COOKIE` ([how](../docs/authentication.md)) and run
+`mise run test:integration`. A weekly workflow runs every test with a repository
+secret.
 
 ## Code style
 
 - Biome lints and formats the code (`biome.json`): double quotes, two-space
   indent, 80 columns.
-- Prettier formats Markdown and YAML at 80 columns with `prose-wrap always`. The
-  scripts run it through `bunx`; it is not a dependency.
+- oxfmt formats Markdown and YAML at 80 columns with `proseWrap` always
+  (`.oxfmtrc.json`).
 - Imports include the `.ts` extension: `import { x } from "./client.ts"`.
 - Public types are string-literal unions (`Model`, `AspectRatio` in
   `src/types.ts`), not enums. Use plain functions, not classes.
