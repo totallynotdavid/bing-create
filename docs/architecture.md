@@ -13,9 +13,10 @@ src/
 ├── types.ts          public types
 ├── constants.ts      MODEL_CONFIGS, USER_AGENT
 ├── shared/
-│   ├── http.ts       fetchWithTimeout, getText, pollUntil, sleep
+│   ├── http.ts       fetchWithTimeout, getText, pollUntil
 │   ├── options.ts    validate, resolveTimeouts and the timeout defaults
-│   ├── request.ts    startGeneration, extractRequestId
+│   ├── request.ts    startGeneration, request ID from the redirect
+│   ├── text.ts       decodeEscapes, shared by image and video parsing
 │   └── url.ts        isBingUrl
 ├── image/
 │   ├── generate.ts   start and poll an image generation
@@ -42,8 +43,8 @@ tests/                bun:test files, plus integration.test.ts
   redirect.
 - `generate.ts` in `image/` and `video/` builds the URLs and decides, per poll
   round, whether the response is a result, an error or "not ready".
-- `parse.ts`, `url.ts` and `filename.ts` are pure functions over strings. They
-  do no I/O, so `tests/` covers them without the network.
+- `parse.ts`, `url.ts`, `filename.ts` and `shared/text.ts` are pure functions
+  over strings. They do no I/O, so `tests/` covers them without the network.
 
 ## Image flow
 
@@ -52,11 +53,11 @@ createImages(prompt, options)           client.ts
   validate(), resolveTimeouts()         shared/options.ts
   initiateGeneration()                  image/generate.ts   POST, read Location
     startGeneration()                   shared/request.ts
-      extractRequestId()                shared/request.ts
   pollForResults()                      image/generate.ts   GET until a body
     pollUntil()                         shared/http.ts
   extractImageUrls()                    image/parse.ts      src="..." values
     normalizeUrls()                     image/url.ts
+      decodeEscapes()                   shared/text.ts
   generateFilename()                    image/filename.ts   one per URL
   -> ImageResult[]
 ```
@@ -71,6 +72,7 @@ createVideo(prompt, options)            client.ts
   pollForVideoUrl()                     video/generate.ts   GET two endpoints
     pollUntil()                         shared/http.ts
     extractVideoUrl()                   video/parse.ts      ourl="..." values
+      decodeEscapes()                   shared/text.ts
       normalizeVideoUrl()               video/url.ts
       isSolidVideoUrl()                 video/url.ts
   -> string

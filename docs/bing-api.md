@@ -38,8 +38,7 @@ POST https://www.bing.com/images/create?q={prompt}&rt=4&mdl={mdl}&ar={ar}&FORM=G
 codes.
 
 Bing returns `302 Found`. The `Location` header holds the request ID in its `id`
-parameter, read by `extractRequestId` in
-[`src/shared/request.ts`](../src/shared/request.ts):
+parameter, read in [`src/shared/request.ts`](../src/shared/request.ts):
 
 ```http
 HTTP/1.1 302 Found
@@ -64,7 +63,7 @@ The library repeats this request every `pollingMs`. It reads the response body:
 ### 3. Read the image URLs
 
 `extractImageUrls` takes the value of every `src="..."` attribute in the HTML.
-The tests feed it relative paths and absolute CDN URLs:
+The values are relative paths or absolute CDN URLs:
 
 ```html
 <img src="/th/id/OIG4.relative?pid=ImgGn" />
@@ -77,7 +76,8 @@ This section owns the image URL contract. `normalizeUrls` in
 [`src/image/url.ts`](../src/image/url.ts) turns every raw URL into one form, in
 this order:
 
-1. Decode `&lt;`, `&gt;`, `&quot;`, `&#39;` and `&amp;`.
+1. Decode `&lt;`, `&gt;`, `&quot;`, `&#39;`, `&amp;` and the JSON escape of `&`
+   (a backslash, then `u0026`) in one pass.
 2. Prefix a path that starts with `/th/id/` with `https://www.bing.com`.
 3. Rewrite `https://tse<N>.mm.bing.net/th/id/` to `https://www.bing.com/th/id/`.
 4. Keep only the `pid` query parameter, or add `pid=ImgGn` when there is none.
@@ -120,11 +120,11 @@ next round.
 ### 3. Read the video URL
 
 This section owns the video URL contract. `extractVideoUrl` in
-[`src/video/parse.ts`](../src/video/parse.ts) decodes `\/`, `&` and the HTML
-entities in the body, then takes the first `ourl="..."` attribute whose URL
-passes [`src/video/url.ts`](../src/video/url.ts). The host `tse<N>.mm.bing.net`
-is first rewritten to `th.bing.com`. The URL is skipped unless all of these
-hold:
+[`src/video/parse.ts`](../src/video/parse.ts) decodes `\/` in the body, then the
+escapes in step 1 of [Read the image URLs](#3-read-the-image-urls), then takes
+the first `ourl="..."` attribute whose URL passes
+[`src/video/url.ts`](../src/video/url.ts). The host `tse<N>.mm.bing.net` is
+first rewritten to `th.bing.com`. The URL is skipped unless all of these hold:
 
 - It is a [Bing URL](#bing-urls).
 - It has `pid=videocreator`.
