@@ -77,6 +77,6 @@ export async function pollUntil<T>(
   }
 }
 
-export function sleep(ms: number): Promise<void> {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
