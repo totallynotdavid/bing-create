@@ -1,6 +1,5 @@
 import { normalizeUrls } from "./url.ts";
 
-/** Returns normalized image URLs or throws when no usable URL remains. */
 export function extractImageUrls(html: string): string[] {
   const srcPattern = /src="([^"]+)"/g;
   const rawUrls = [...html.matchAll(srcPattern)]
