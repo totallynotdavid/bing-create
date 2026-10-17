@@ -1,20 +1,10 @@
+import { decodeEscapes } from "../shared/text.ts";
 import { isBingUrl } from "../shared/url.ts";
 
 export function normalizeUrls(rawUrls: string[]): string[] {
   return [
-    ...new Set(
-      rawUrls.map(decodeHtmlEntities).map(normalizeUrl).filter(isImageUrl),
-    ),
+    ...new Set(rawUrls.map(decodeEscapes).map(normalizeUrl).filter(isImageUrl)),
   ];
-}
-
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&");
 }
 
 function normalizeUrl(url: string): string {
@@ -30,7 +20,6 @@ function normalizeUrl(url: string): string {
     );
   }
 
-  // Strip all query params except pid (the only one that matters)
   if (url.includes("?")) {
     const [base, query] = url.split("?");
     if (!base) return url;
