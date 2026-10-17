@@ -31,16 +31,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "clean": "bun x shx rm -rf dist",
-    "check": "biome check . && bunx prettier --check --print-width 80 --prose-wrap always '**/*.{md,yml}'",
-    "format": "biome check --write . && bunx prettier --write --print-width 80 --prose-wrap always '**/*.{md,yml}'",
-    "build": "bun x bunup",
-    "test": "bun --env-file=.env test",
-    "prepublishOnly": "bun run clean && bun run build"
+    "prepublishOnly": "mise run build"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
     "@types/bun": "^1.4.3",
     "bunup": "^0.16.32",
-    "shx": "^0.4.0"
+    "oxfmt": "^0.73.0",
+    "typescript": "^7.0.2"
   }
 }
