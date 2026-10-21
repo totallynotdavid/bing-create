@@ -11,19 +11,19 @@ and Node.js versions pinned in `mise.toml`.
 git clone https://github.com/totallynotdavid/bing-create.git
 cd bing-create
 mise install
-mise run install
+bun run setup
 ```
 
 ## Check a change
 
 ```bash
-mise run check             # read-only: lint, typecheck, unit tests, build
-mise run fix               # rewrite files to pass lint
-mise run lint              # Biome on code and JSON, oxfmt on md and yml
-mise run typecheck         # tsc --noEmit
-mise run test              # unit tests, without the integration tests
-mise run test:integration  # calls Bing; needs a cookie
-mise run build             # bunup builds dist/
+bun run check              # read-only: lint, typecheck, unit tests, build
+bun run fix                # rewrite files to pass lint
+bun run lint               # Biome on code and JSON, oxfmt on md and yml
+bun run typecheck          # tsc --noEmit
+bun run test               # unit tests, without the integration tests
+bun run test:integration   # calls Bing; needs a cookie
+bun run build              # bunup builds dist/
 ```
 
 CI runs `check` on every pull request and every push to `master`, and before a
@@ -31,7 +31,7 @@ release is published.
 
 The integration tests call Bing and need a cookie. Copy `.env.example` to
 `.env`, set `BING_COOKIE` ([how](../docs/authentication.md)) and run
-`mise run test:integration`. A weekly workflow runs every test with a repository
+`bun run test:integration`. A weekly workflow runs every test with a repository
 secret.
 
 ## Code style

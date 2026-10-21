@@ -31,7 +31,20 @@
     "node": ">=22"
   },
   "scripts": {
-    "prepublishOnly": "mise run build"
+    "setup": "bun install --frozen-lockfile",
+    "lint:ts": "bunx biome check .",
+    "lint:docs": "bunx oxfmt --check '**/*.md' '**/*.yml'",
+    "lint": "bun run lint:ts && bun run lint:docs",
+    "fix:ts": "bunx biome check --write .",
+    "fix:docs": "bunx oxfmt '**/*.md' '**/*.yml'",
+    "fix": "bun run fix:ts && bun run fix:docs",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test --path-ignore-patterns tests/integration.test.ts",
+    "test:integration": "bun test tests/integration.test.ts",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov",
+    "build": "bunx bunup",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "prepublishOnly": "bunx bunup"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
