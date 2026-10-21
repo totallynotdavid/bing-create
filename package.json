@@ -1,6 +1,6 @@
 {
   "name": "bing-create",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Generate images using Bing Image Creator",
   "keywords": [
     "bing",
