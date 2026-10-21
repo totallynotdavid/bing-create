@@ -28,9 +28,9 @@ jobs:
 
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5
 
-      - run: mise run install
+      - run: bun run setup
 
-      # npm publish invokes mise run build through prepublishOnly.
+      # npm publish builds dist/ through prepublishOnly.
       - run: npm publish
 
   github:

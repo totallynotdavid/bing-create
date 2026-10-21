@@ -21,9 +21,9 @@ jobs:
 
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5
 
-      - run: mise run install
+      - run: bun run setup
 
-      - run: mise run test:coverage
+      - run: bun run test:coverage
         env:
           BING_COOKIE: ${{ secrets.BING_COOKIE }}
         timeout-minutes: 5
