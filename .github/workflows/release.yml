@@ -11,8 +11,37 @@ jobs:
     permissions:
       contents: read
 
+  tag:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Tag matches package.json
+        run: |
+          version=$(jq -r .version package.json)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Release notes name this version
+        run: |
+          version=$(jq -r .version package.json)
+          expected="bing-create $version is out."
+          first=$(head -n 1 .github/release-notes.md)
+          if [ "$first" != "$expected" ]; then
+            echo "::error::first line of .github/release-notes.md is '$first', expected '$expected'"
+            exit 1
+          fi
+
   publish:
-    needs: verify
+    needs: [verify, tag]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'totallynotdavid' }}
 
@@ -45,4 +74,5 @@ jobs:
 
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
+          body_path: .github/release-notes.md
           generate_release_notes: true
