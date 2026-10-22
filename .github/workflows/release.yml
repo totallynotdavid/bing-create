@@ -1,9 +1,13 @@
 name: release
 
+# Pull requests and manual runs verify and package the release without
+# publishing it.
 on:
   push:
     tags:
       - "v*"
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -23,6 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Tag matches package.json
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           version=$(jq -r .version package.json)
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
@@ -40,10 +45,83 @@ jobs:
             exit 1
           fi
 
-  publish:
-    needs: [verify, tag]
+  preflight:
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'totallynotdavid' }}
+
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # npm trusted publishing uses OIDC. Verify the publish environment exists.
+      - name: Every environment a job names exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          environments=$(yq -o=json .github/workflows/release.yml | jq -r '.jobs[].environment | select(. != null) | if type == "string" then . else .name end' | sort -u)
+          if [ -z "$environments" ]; then
+            echo "::error::no job in release.yml names an environment"
+            exit 1
+          fi
+          for environment in $environments; do
+            if ! gh api "repos/$GITHUB_REPOSITORY/environments/$environment" --jq .name; then
+              echo "::error::environment '$environment' does not exist in $GITHUB_REPOSITORY"
+              exit 1
+            fi
+          done
+
+  package:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5
+
+      - run: bun run setup
+
+      - run: bun run build
+
+      - name: Pack the tarball
+        run: |
+          mkdir "$RUNNER_TEMP/package"
+          npm pack --pack-destination "$RUNNER_TEMP/package"
+
+      - name: Tarball installs and exports the API
+        run: |
+          mkdir "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          npm install "$RUNNER_TEMP"/package/*.tgz
+          node --input-type=module -e '
+            import { createImages, createVideo } from "bing-create";
+            for (const fn of [createImages, createVideo]) {
+              if (typeof fn !== "function") throw new Error("missing export");
+            }
+          '
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: package
+          path: ${{ runner.temp }}/package/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: [verify, tag, preflight, package]
+    runs-on: ubuntu-latest
+    if:
+      ${{ startsWith(github.ref, 'refs/tags/') && github.repository_owner ==
+      'totallynotdavid' }}
 
     environment:
       name: publishing
@@ -54,23 +132,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5
 
-      - run: bun run setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: package
+          path: ${{ runner.temp }}/package
 
-      # npm publish builds dist/ through prepublishOnly.
-      - run: npm publish
+      # Publish the tarball built and smoke-tested by the package job.
+      - run: npm publish "$RUNNER_TEMP"/package/*.tgz
 
   github:
     needs: publish
     runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
 
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
