@@ -27,7 +27,7 @@ bun run build              # bunup builds dist/
 ```
 
 CI runs `check` on every pull request and every push to `master`, and before a
-release is published.
+release is published. To publish a release, read [releasing](RELEASING.md).
 
 The integration tests call Bing and need a cookie. Copy `.env.example` to
 `.env`, set `BING_COOKIE` ([how](../docs/authentication.md)) and run
