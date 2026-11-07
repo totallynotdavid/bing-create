@@ -13,7 +13,7 @@ src/
 ├── types.ts          public types
 ├── constants.ts      MODEL_CONFIGS, USER_AGENT
 ├── shared/
-│   ├── http.ts       fetchWithTimeout, getText, pollUntil
+│   ├── http.ts       request, getText, pollUntil
 │   ├── options.ts    validate, resolveTimeouts and the timeout defaults
 │   ├── request.ts    startGeneration, request ID from the redirect
 │   ├── text.ts       decodeEscapes, shared by image and video parsing

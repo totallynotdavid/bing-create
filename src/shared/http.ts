@@ -1,12 +1,17 @@
 import { USER_AGENT } from "../constants.ts";
 import type { ResolvedTimeouts } from "./options.ts";
 
-export async function fetchWithTimeout(
+/**
+ * Sends one request and runs `read` on the response. The timer covers `read`,
+ * so a body that stalls after the headers also times out.
+ */
+export async function request<T>(
   url: string,
   cookie: string,
   timeoutMs: number,
   method: "GET" | "POST",
-): Promise<Response> {
+  read: (response: Response) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -24,56 +29,62 @@ export async function fetchWithTimeout(
       signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
-    return response;
+    return await read(response);
   } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === "AbortError") {
+    if (controller.signal.aborted) {
       throw new Error(`Request timed out after ${timeoutMs}ms`);
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
-export async function getText(
+export function getText(
   url: string,
   cookie: string,
   timeoutMs: number,
 ): Promise<string> {
-  const response = await fetchWithTimeout(url, cookie, timeoutMs, "GET");
+  return request(url, cookie, timeoutMs, "GET", (response) => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.text();
+    return response.text();
+  });
 }
 
 /**
- * Repeats while `round` returns `undefined` and caps each request at the
- * remaining generation time.
+ * Repeats while `round` returns `undefined`. `round` gets a function that
+ * returns the timeout for its next request: `requestMs`, capped at the
+ * generation time left. That function throws when no time is left.
  */
 export async function pollUntil<T>(
   kind: string,
   timeouts: ResolvedTimeouts,
-  round: (requestTimeoutMs: number) => Promise<T | undefined>,
+  round: (nextRequestMs: () => number) => Promise<T | undefined>,
 ): Promise<T> {
   const startTime = Date.now();
-
-  while (true) {
-    const remainingMs = timeouts.generationMs - (Date.now() - startTime);
-    if (remainingMs <= 0) {
+  const remainingMs = () => timeouts.generationMs - (Date.now() - startTime);
+  const nextRequestMs = () => {
+    const remaining = remainingMs();
+    if (remaining <= 0) {
       throw new Error(
         `${kind} generation timed out after ${timeouts.generationMs / 1000}s`,
       );
     }
+    return Math.min(timeouts.requestMs, remaining);
+  };
 
-    const result = await round(Math.min(timeouts.requestMs, remainingMs));
+  while (true) {
+    nextRequestMs();
+
+    const result = await round(nextRequestMs);
     if (result !== undefined) {
       return result;
     }
 
-    await sleep(timeouts.pollingMs);
+    await sleep(Math.max(0, Math.min(timeouts.pollingMs, remainingMs())));
   }
 }
 

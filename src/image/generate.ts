@@ -24,8 +24,8 @@ export function pollForResults(
 ): Promise<string> {
   const pollingUrl = `https://www.bing.com/images/create/async/results/${requestId}?q=${encodeURIComponent(prompt)}&mdl=${mdl}&ar=${ar}`;
 
-  return pollUntil("Image", timeouts, async (requestTimeoutMs) => {
-    const text = await getText(pollingUrl, cookie, requestTimeoutMs);
+  return pollUntil("Image", timeouts, async (nextRequestMs) => {
+    const text = await getText(pollingUrl, cookie, nextRequestMs());
 
     if (!text) {
       return undefined;

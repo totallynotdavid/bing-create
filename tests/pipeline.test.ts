@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { createImages, createVideo } from "../src/client.ts";
-import { redirect, stubBing } from "./stub-bing.ts";
+import { after, redirect, stalledBody, stubBing } from "./stub-bing.ts";
 
 const cookie = "valid_cookie";
 
@@ -116,6 +116,27 @@ describe("createImages", () => {
     ).rejects.toThrow("Image generation timed out after 0.03s");
   });
 
+  test("times out when the body stalls after the headers", () => {
+    stubBing((_url, method, signal) =>
+      method === "POST" ? redirect("1-abc") : stalledBody(signal),
+    );
+
+    return expect(
+      createImages("test", { cookie, timeouts: { requestMs: 30 } }),
+    ).rejects.toThrow("Request timed out after 30ms");
+  });
+
+  test("stops at generationMs instead of sleeping a full polling interval", () => {
+    stubImages(() => "");
+
+    return expect(
+      createImages("test", {
+        cookie,
+        timeouts: { generationMs: 30, pollingMs: 60_000 },
+      }),
+    ).rejects.toThrow("Image generation timed out after 0.03s");
+  });
+
   test("rejects when Bing does not redirect", () => {
     stubBing(() => new Response("<html>home</html>"));
 
@@ -214,6 +235,22 @@ describe("createVideo", () => {
     return expect(createVideo("test", { cookie })).rejects.toThrow(
       "Bing error: blocked prompt",
     );
+  });
+
+  test("does not start the second request of a round past generationMs", () => {
+    stubBing((url, method, signal) => {
+      if (method === "POST") return redirect("1-vid");
+      const onResultPage = url.pathname.endsWith("/ai-video-generator");
+      return after(
+        40,
+        signal,
+        new Response(onResultPage ? `<div ourl="${videoUrl}"></div>` : ""),
+      );
+    });
+
+    return expect(
+      createVideo("test", { cookie, timeouts: { generationMs: 60 } }),
+    ).rejects.toThrow("timed out");
   });
 
   test("times out when no video appears", () => {

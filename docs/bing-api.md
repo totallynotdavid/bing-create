@@ -4,7 +4,7 @@ The library drives the web endpoints behind bing.com/images/create. They are not
 a documented API and can change without notice. This page records what the code
 in `src/` sends and reads.
 
-Every request is sent by `fetchWithTimeout` in
+Every request is sent by `request` in
 [`src/shared/http.ts`](../src/shared/http.ts) with these headers and with
 `redirect: "manual"`, so a 302 reaches the caller:
 

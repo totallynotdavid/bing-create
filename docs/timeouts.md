@@ -10,16 +10,16 @@ field is optional.
 | `requestMs`    | `30_000`  | Longest wait for one HTTP request.                |
 
 The defaults are `DEFAULT_TIMEOUTS` in
-[`src/shared/options.ts`](../src/shared/options.ts).
+[`src/shared/options.ts`](../src/shared/options.ts). Each value must be a finite
+number of 0 or more, or the call throws.
 
-Each request waits for the smaller of `requestMs` and the generation time that
-was left when the poll round started. A request cut short that way throws
-`Request timed out after <ms>ms`, not the generation timeout. See
-[Errors](errors.md).
-
-An image round sends one request. A video round sends up to two with the same
-limit, so `createVideo` can run past `generationMs` by up to twice the time that
-was left.
+`requestMs` covers the whole request, from sending it to reading the last byte
+of the body. Each request waits for the smaller of `requestMs` and the
+generation time left when it starts. A request cut short that way throws
+`Request timed out after <ms>ms`, not the generation timeout. The pause between
+polls is cut the same way, so the call never waits past `generationMs`. A video
+round sends up to two requests. The second does not start when no generation
+time is left. See [Errors](errors.md).
 
 Set `generationMs` above the longest wait you expect. Observed waits are in
 [Images](images.md#observed-not-verified).

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "./http.ts";
+import { request } from "./http.ts";
 
 function extractRequestId(redirectUrl: string): string {
   const match = redirectUrl.match(/[?&]id=([^&]+)/);
@@ -13,9 +13,16 @@ export async function startGeneration(
   cookie: string,
   timeoutMs: number,
 ): Promise<string> {
-  const response = await fetchWithTimeout(url, cookie, timeoutMs, "POST");
-
-  const redirectUrl = response.headers.get("location");
+  const redirectUrl = await request(
+    url,
+    cookie,
+    timeoutMs,
+    "POST",
+    async (response) => {
+      await response.body?.cancel();
+      return response.headers.get("location");
+    },
+  );
   if (!redirectUrl) {
     throw new Error("No redirect from Bing. Cookie may be invalid or expired.");
   }

@@ -32,8 +32,8 @@ export function pollForVideoUrl(
   resultUrl.searchParams.set("FORM", "GUH2CR");
   resultUrl.searchParams.set("dmreload", "1");
 
-  return pollUntil("Video", timeouts, async (requestTimeoutMs) => {
-    const asyncText = await getText(asyncPollingUrl, cookie, requestTimeoutMs);
+  return pollUntil("Video", timeouts, async (nextRequestMs) => {
+    const asyncText = await getText(asyncPollingUrl, cookie, nextRequestMs());
     const videoFromAsync = extractVideoUrl(asyncText);
     if (videoFromAsync) {
       return videoFromAsync;
@@ -49,7 +49,7 @@ export function pollForVideoUrl(
     const resultText = await getText(
       resultUrl.toString(),
       cookie,
-      requestTimeoutMs,
+      nextRequestMs(),
     );
     return extractVideoUrl(resultText) ?? undefined;
   });
