@@ -43,8 +43,8 @@ interface ImageResult {
 - `url` is an image URL. Which URLs the library returns, and in what form, is in
   [Bing API](bing-api.md#3-read-the-image-urls).
 - `suggestedFilename` is the prompt in lowercase, with each run of characters
-  outside `a-z0-9` replaced by `-`, leading and trailing `-` removed, cut to 50
-  characters, followed by `_<index>.jpg`. The index starts at 0.
+  outside `a-z0-9` replaced by `-`, leading `-` removed, cut to 50 characters,
+  trailing `-` removed, followed by `_<index>.jpg`. The index starts at 0.
   `"A cat, wearing a space helmet!"` gives `a-cat-wearing-a-space-helmet_0.jpg`.
   A prompt with no ASCII letters or digits gives `_0.jpg`.
 

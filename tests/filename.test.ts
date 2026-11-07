@@ -12,6 +12,7 @@ test.each([
     0,
     "this-is-a-very-long-prompt-that-should-be-truncate_0.jpg",
   ],
+  [`${"a".repeat(49)} bbb`, 0, `${"a".repeat(49)}_0.jpg`],
   ["", 0, "_0.jpg"],
   ["---", 0, "_0.jpg"],
 ])("generateFilename(%p, %p) is %p", (prompt, index, expected) => {

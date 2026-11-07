@@ -3,7 +3,8 @@ export function generateFilename(prompt: string, index: number): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 50);
+    .slice(0, 50)
+    .replace(/-$/, "");
 
   return `${slug}_${index}.jpg`;
 }
