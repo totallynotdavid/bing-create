@@ -1,11 +1,13 @@
 import type {
+  AspectRatio,
   CreateImagesOptions,
   CreateVideoOptions,
   ImageResult,
+  Model,
   VideoAspectRatio,
 } from "./types.ts";
 import { MODEL_CONFIGS } from "./constants.ts";
-import { resolveTimeouts, validate } from "./shared/options.ts";
+import { oneOf, resolveTimeouts, validate } from "./shared/options.ts";
 import { initiateGeneration, pollForResults } from "./image/generate.ts";
 import { extractImageUrls } from "./image/parse.ts";
 import { generateFilename } from "./image/filename.ts";
@@ -20,11 +22,21 @@ export async function createImages(
   prompt: string,
   options: CreateImagesOptions,
 ): Promise<ImageResult[]> {
-  validate(prompt, options.cookie);
+  validate(prompt, options?.cookie);
 
-  const model = options.model ?? "dalle3";
-  const aspectRatio = options.aspectRatio ?? "square";
+  const model = oneOf(
+    "model",
+    options.model,
+    Object.keys(MODEL_CONFIGS) as Model[],
+    "dalle3",
+  );
   const config = MODEL_CONFIGS[model];
+  const aspectRatio = oneOf(
+    "aspectRatio",
+    options.aspectRatio,
+    Object.keys(config.aspectRatioMap) as AspectRatio[],
+    "square",
+  );
   const ar = config.aspectRatioMap[aspectRatio];
   const timeouts = resolveTimeouts(options.timeouts);
 
@@ -55,9 +67,14 @@ export async function createVideo(
   prompt: string,
   options: CreateVideoOptions,
 ): Promise<string> {
-  validate(prompt, options.cookie);
+  validate(prompt, options?.cookie);
 
-  const aspectRatio = options.aspectRatio ?? "portrait";
+  const aspectRatio = oneOf(
+    "aspectRatio",
+    options.aspectRatio,
+    Object.keys(VIDEO_ASPECT_RATIO_MAP) as VideoAspectRatio[],
+    "portrait",
+  );
   const ar = VIDEO_ASPECT_RATIO_MAP[aspectRatio];
   const timeouts = resolveTimeouts(options.timeouts);
 
